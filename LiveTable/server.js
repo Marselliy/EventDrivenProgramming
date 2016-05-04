@@ -9,6 +9,17 @@ String.prototype.replaceAll = function(search, replacement) {
     return target.replace(new RegExp(search, 'g'), replacement);
 };
 
+Array.prototype.remove = function() {
+    var what, a = arguments, L = a.length, ax;
+    while (L && this.length) {
+        what = a[--L];
+        while ((ax = this.indexOf(what)) !== -1) {
+            this.splice(ax, 1);
+        }
+    }
+    return this;
+};
+
 var index = api.fs.readFileSync('./index.html');
 
 var server = api.http.createServer(function(req, res) {
@@ -31,7 +42,6 @@ var regex = /[a-f][1-6]/ig;
 var reCalcCell = function(cell, conn) {
 
   var links = cells[cell]['formula'].match(regex);
-
 
   if (links) {
     var temp = cells[cell]['formula'];
@@ -76,10 +86,23 @@ ws.on('request', function(req) {
 
     data = JSON.parse(data);
     cells[data['cell']] = cells[data['cell']] || {};
+
+    //Remove existing links
+    if (cells[data['cell']]['formula']) {
+    var links = cells[data['cell']]['formula'].match(regex);
+    if (links)
+      links.forEach(function (cell) {
+        var cellUp = cell.toUpperCase();
+        if (cells[cellUp])
+          cells[cellUp]['links'].remove(data['cell']);
+      })
+    }
+
     cells[data['cell']]['formula'] = data['value'];
 
     reCalcCell(data['cell'], connection);
 
+    console.log(cells);
 
     clients.forEach(function(client) {
       if (connection !== client) {
